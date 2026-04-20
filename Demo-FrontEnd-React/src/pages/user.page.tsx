@@ -1,8 +1,13 @@
-import { PlusCircleOutlined } from "@ant-design/icons";
-import { Button, Table } from "antd";
-import axios from "axios";
+import {
+  DeleteOutlined,
+  EditOutlined,
+  PlusCircleOutlined,
+} from "@ant-design/icons";
+import { Button, message, Popconfirm, Table } from "antd";
 import { useEffect, useState } from "react";
 import CreateUserModal from "../components/modal/create-user.modal";
+import { deleteUserAPI, getUsersAPI } from "../services/api";
+import UpdateUserModal from "../components/modal/update-user.modal";
 
 interface IUser {
   id: number;
@@ -12,16 +17,38 @@ interface IUser {
 const UserPage = () => {
   const [users, setUsers] = useState<IUser[]>([]);
   const [openCreateModal, setOpenCreateModal] = useState<boolean>(false);
+  const [openUpdateModal, setOpenUpdateModal] = useState<boolean>(false);
+  const [dataUpdate, setDataUpdate] = useState<IUser | null>(null);
+
   const getAllUsers = async () => {
-    const response = await axios.get("http://localhost:8080/users");
-    console.log(">>> check response: ", response);
+    const response = await getUsersAPI();
+    //console.log(">>> check response: ", response);
     if (response?.data?.status === "Success") {
       setUsers(response.data.data);
     }
   };
   useEffect(() => {
-    getAllUsers();
+    const fetchUsers = async () => {
+      const response = await getUsersAPI();
+      if (response?.data?.status === "Success") {
+        setUsers(response.data.data);
+      }
+    };
+
+    fetchUsers();
   }, []);
+
+  const handleClickUpdate = (data: IUser) => {
+    setDataUpdate(data);
+    setOpenUpdateModal(true);
+  };
+
+  const handleClickDelete = async (data: IUser) => {
+    const response = await deleteUserAPI(data.id);
+    console.log(">>> delete response: ", response);
+    message.success("Xoá user thành công!");
+    await getAllUsers();
+  };
 
   const columns = [
     {
@@ -35,6 +62,47 @@ const UserPage = () => {
     {
       title: "Email",
       dataIndex: "email",
+    },
+    {
+      title: "Action",
+      render: (_: string, record: IUser) => {
+        return (
+          <>
+            <Button
+              onClick={() => handleClickUpdate(record)}
+              style={{
+                cursor: "pointer",
+                backgroundColor: "green",
+                color: "white",
+                marginRight: 10,
+              }}
+              icon={<EditOutlined />}
+            >
+              Update
+            </Button>
+
+            <Popconfirm
+              title="Delete the user"
+              description="Are you sure to delete this user?"
+              onConfirm={() => handleClickDelete(record)}
+              // onCancel={cancel}
+              okText="Yes"
+              cancelText="No"
+            >
+              <Button
+                style={{
+                  cursor: "pointer",
+                  backgroundColor: "red",
+                  color: "white",
+                }}
+                icon={<DeleteOutlined />}
+              >
+                Delete
+              </Button>
+            </Popconfirm>
+          </>
+        );
+      },
     },
   ];
 
@@ -60,6 +128,15 @@ const UserPage = () => {
       <CreateUserModal
         openCreateModal={openCreateModal}
         setOpenCreateModal={setOpenCreateModal}
+        getAllUsers={getAllUsers}
+      />
+
+      <UpdateUserModal
+        openUpdateModal={openUpdateModal}
+        setOpenUpdateModal={setOpenUpdateModal}
+        getAllUsers={getAllUsers}
+        dataUpdate={dataUpdate}
+        setDataUpdate={setDataUpdate}
       />
     </div>
   );
